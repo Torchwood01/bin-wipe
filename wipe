@@ -1,27 +1,42 @@
 #!/bin/bash
-echo "Welcome to Manul disk wiping tool 1.3"
+wipe () {
+    openssl enc -aes-256-ctr -pass pass:"$(dd if=/dev/random bs=128 count=1 2>/dev/null | base64)" -nosalt </dev/zero | pv -bartpes $(du -sb $1) | dd bs=64K of=$1
+}
 
-#Testing if pv exist
-if [ ! -e /bin/pv ]
-then
-    echo "ERROR! No pv package found! You need to install pv." ; exit
-fi
-
-#Main body
-while [ -n "$1" ]
-do
+err () {
+    . () { echo -e $1
+    }
     case "$1" in
-	-h) echo -e "Use 'wipe sdXY' to wipe a device, use 'wipe -h' to show this help message \nYou may need to read output of 'fdisk -l' carefully to specify a device to wipe" ;; #Help message
-	"") echo "ERROR! Please specify a device to wipe!" ;; #Testing if user did not specified any key
+	0) . "Use 'wipe sdXY' (or just sdX) to wipe a device\nYou may need to read output of 'fdisk -l' carefully to specify a device" ;;
+	1) . "ERROR! No pv package found! Install pv first" ;;
+	2) . "ERROR! Please specify a device to wipe!" ;;
+	3) . "ERROR! no such device found!\nTry using 'wipe -h' to get help" ;;
+	esac
+}
+
+pvt () {
+    if [ ! -e /bin/pv ]
+    then
+        err 1
+	kill $$
+    fi
+}
+
+main () {
+    pvt
+    case "$1" in
+	"") err 2 ;;
+	-h) err 0 ;;
 	*)
-	    if [ -e /dev/"$1" ] #Testing if device exist
+	    if [ -e /dev/$1 ]
 	    then
-		echo "Wiping /dev/$1, please whait…" ;
-		openssl enc -aes-256-ctr -pass pass:"$(dd if=/dev/urandom bs=128 count=1 2>/dev/null | base64)" -nosalt </dev/zero | pv -bartpes $(du -sb /dev/"$1") | dd bs=64K of=/dev/"$1" #Magic comes here
-	   else
-	       echo "ERROR! no such device found!" ; echo "Try using 'wipe -h' to get help"
+		tgt=/dev/$1
+		echo "Wiping $tgt, please whait…" ;
+	        wipe $tgt
+    else
+        err 3
 	    fi
-	    ;;
     esac
-    shift
-done
+}
+
+main $1
