@@ -2,26 +2,6 @@
 wipe () {
     openssl enc -aes-256-ctr -pass pass:"$(dd if=/dev/random bs=128 count=1 2>/dev/null | base64)" -nosalt </dev/zero | pv -bartpes $(du -sb $1) | dd bs=64K of=$1
 }
-
-err () {
-    . () { echo -e $1
-    }
-    case "$1" in
-	0) . "Use 'wipe sdXY' (or just sdX) to wipe a device\nYou may need to read output of 'fdisk -l' carefully to specify a device" ;;
-	1) . "ERROR! No pv package found! Install pv first" ;;
-	2) . "ERROR! Please specify a device to wipe!" ;;
-	3) . "ERROR! no such device found!\nTry using 'wipe -h' to get help" ;;
-	esac
-}
-
-pvt () {
-    if [ ! -e /bin/pv ]
-    then
-        err 1
-	kill $$
-    fi
-}
-
 main () {
     pvt
     case "$1" in
@@ -37,6 +17,24 @@ main () {
         err 3
 	    fi
     esac
+}
+
+err () {
+    . () { echo -e $1
+    }
+    case "$1" in
+	0) . "Use 'wipe sdXY' (or just sdX) to wipe a device\nYou may need to read output of 'fdisk -l' carefully to specify a device" ;;
+	1) . "ERROR! No pv package found! Install pv first" ;;
+	2) . "ERROR! Please specify a device to wipe!" ;;
+	3) . "ERROR! no such device found!\nTry using 'wipe -h' to get help" ;;
+	esac
+}
+pvt () {
+    if [ ! -e /bin/pv ]
+    then
+        err 1
+	kill $$
+    fi
 }
 
 main $1
